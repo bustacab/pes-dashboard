@@ -15,7 +15,8 @@ class User:
         cursor = connection.cursor()
         cursor.execute(f"INSERT INTO player (nombre) VALUES ({self.nombre})")
 
-    def update_user(self, ur_pk, new_name):
+    @staticmethod
+    def update_user(ur_pk, new_name):
         connection = psycopg2.connect(
             host="127.0.0.1",
             database="pes",
@@ -23,7 +24,7 @@ class User:
             password="pes"
         )
         cursor = connection.cursor()
-        cursor.execute(f"UPDATE player SET nombre = {new_name} WHERE pk = {ur_pk} ")
+        cursor.execute(f"UPDATE player SET nombre = {new_name} WHERE pk = {ur_pk}")
 
     def show_user(self, ur_pk):
         connection = psycopg2.connect(
@@ -64,6 +65,7 @@ class Team:
         )
         cursor = connection.cursor()
         cursor.execute(f"INSERT INTO equipo (nombre, estadio) VALUES ({self.nombre}, {self.estadio})")
+        connection.commit()
 
     def update_team(self, ur_pk, new_name, new_stadium):
         connection = psycopg2.connect(
@@ -101,13 +103,14 @@ class Team:
 ## --------------------------------------------------------------------------------------------
 
 
-class Players:
+class Player:
 
     def __init__(self, nombre, edad):
         self.nombre = nombre
         self.edad = edad
+        self.pk = None
 
-    def create_players(self):
+    def create_player(self):
         connection = psycopg2.connect(
             host="127.0.0.1",
             database="pes",
@@ -115,20 +118,52 @@ class Players:
             password="pes")
 
         cursor = connection.cursor()
-        cursor.execute(f"INSERT INTO jugadores (nombre, edad) VALUES ({self.nombre}, {self.edad})")
+        cursor.execute(f"INSERT INTO jugadores (nombre, edad) VALUES ('{self.nombre}', {self.edad}) RETURNING pk")
+        self.pk = cursor.fetchone()[0]
+        connection.commit()
 
-    def update_players(self, new_name, new_edad, ur_pk):
+    def retrieve_player(self):
+        if self.pk is not None:
+            connection = psycopg2.connect(
+                host="127.0.0.1",
+                database="pes",
+                user="pes",
+                password="pes"
+            )
+            cursor = connection.cursor()
+            cursor.execute(f"SELECT * FROM jugadores WHERE pk = {self.pk}")
+            players = cursor.fetchall()
+            return players
+
+    def update_player(self, new_name, new_edad):
+        if self.pk is not None:
+            connection = psycopg2.connect(
+                host="127.0.0.1",
+                database="pes",
+                user="pes",
+                password="pes"
+            )
+
+            cursor = connection.cursor()
+            self.nombre = new_name
+            self.edad = new_edad
+            cursor.execute(f"UPDATE jugadores SET nombre = '{new_name}', edad={new_edad} WHERE pk = {self.pk}")
+            connection.commit()
+
+    def delete_players(self):
         connection = psycopg2.connect(
             host="127.0.0.1",
             database="pes",
             user="pes",
             password="pes"
         )
-
         cursor = connection.cursor()
-        cursor.execute(f"UPDATE jugadores SET nombre = {new_name}, edad={new_edad} WHERE pk = {ur_pk}")
+        cursor.execute(f"DELETE FROM jugadores WHERE pk = {self.pk}")
+        connection.commit()
+        self.pk = None
 
-    def show_players(self, ur_pk):
+    @staticmethod
+    def list_players(cls):
         connection = psycopg2.connect(
             host="127.0.0.1",
             database="pes",
@@ -136,20 +171,9 @@ class Players:
             password="pes"
         )
         cursor = connection.cursor()
-        cursor.execute(f"SELECT * FROM jugadores WHERE pk = {ur_pk}")
+        cursor.execute(f"SELECT * FROM jugadores")
         players = cursor.fetchall()
-        print(players)
-
-    def delete_players(self, ur_pk):
-        connection = psycopg2.connect(
-            host="127.0.0.1",
-            database="pes",
-            user="pes",
-            password="pes"
-        )
-        cursor = connection.cursor()
-        cursor.execute(f"DELETE FROM jugadores WHERE pk = {ur_pk}")
-
+        return players
 
 # -------------------------------------------------------------------------------------
 
@@ -425,3 +449,8 @@ def connect_to_db():
 
 
 connect_to_db()
+
+## +++ Iniciando Test de CRUD's +++ ##
+
+player = Player("Juan Carlos", 101)
+import ipdb; ipdb.set_trace()
