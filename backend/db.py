@@ -223,6 +223,7 @@ class Player:
 class Game:
     def __init__(self, duracion):
         self.duracion = duracion
+        self.pk = None
 
     def create_game(self):
         connection = psycopg2.connect(
@@ -232,9 +233,24 @@ class Game:
             password="pes"
         )
         cursor = connection.cursor()
-        cursor.execute(f"INSERT INTO partido(duracion) VALUES ({self.duracion})")
+        cursor.execute(f"INSERT INTO partido(duracion) VALUES ('{self.duracion}') RETURNING pk")
+        self.pk = cursor.fetchone()[0]
+        connection.commit()
 
-    def update_game(self, ur_pk, new_duracion):
+    def retrieve_game(self):
+        if self.pk is not None:
+            connection = psycopg2.connect(
+                host="127.0.0.1",
+                database="pes",
+                user="pes",
+                password="pes"
+            )
+            cursor = connection.cursor()
+            cursor.execute(f"SELECT * FROM partido WHERE pk = {self.pk}")
+            game = cursor.fetchall()
+            return game
+
+    def update_game(self, new_duracion):
         connection = psycopg2.connect(
             host="127.0.0.1",
             database="pes",
@@ -243,9 +259,12 @@ class Game:
         )
 
         cursor = connection.cursor()
-        cursor.execute(f"UPDATE partido SET duracion = {new_duracion} WHERE pk = {ur_pk}")
+        self.duracion = new_duracion
+        cursor.execute(f"UPDATE partido SET duracion = {new_duracion} WHERE pk = {self.pk}")
+        connection.commit()
 
-    def show_game(self, ur_pk):
+
+    def delete_game(self):
         connection = psycopg2.connect(
             host="127.0.0.1",
             database="pes",
@@ -253,19 +272,21 @@ class Game:
             password="pes"
         )
         cursor = connection.cursor()
-        cursor.execute(f"SELECT * FROM partido WHERE pk = {ur_pk}")
+        cursor.execute(f"DELETE FROM partido WHERE pk = {self.pk}")
+        connection.commit()
+        self.pk = None
+
+    def list_games(self):
+        connection = psycopg2.connect(
+            host="127.0.0.1",
+            database="pes",
+            user="pes",
+            password="pes"
+        )
+        cursor = connection.cursor()
+        cursor.execute(f"SELECT * FROM partido")
         games = cursor.fetchall()
-        print(games)
-
-    def delete_game(self, ur_pk):
-        connection = psycopg2.connect(
-            host="127.0.0.1",
-            database="pes",
-            user="pes",
-            password="pes"
-        )
-        cursor = connection.cursor()
-        cursor.execute(f"DELETE FROM partido WHERE pk = {ur_pk}")
+        return games
 
 
 # -------------------------------------------------------------------------------------
@@ -273,6 +294,7 @@ class UserGame:
     def __init__(self, fk_partido, fk_player):
         self.fk_partido = fk_partido
         self.fk_player = fk_player
+
 
     def create_usergame(self, pk_partido, pk_player):
         connection = psycopg2.connect(
@@ -283,10 +305,24 @@ class UserGame:
         )
         cursor = connection.cursor()
         cursor.execute(f"INSERT INTO player_partido(fk_partido, fk_player) VALUES ({pk_partido}, {pk_player})")
+        connection.commit()
+
+    def retrieve_usergame(self, pk_player):
+        if pk_player is not None:
+            connection = psycopg2.connect(
+                host="127.0.0.1",
+                database="pes",
+                user="pes",
+                password="pes"
+            )
+            cursor = connection.cursor()
+            cursor.execute(f"SELECT * FROM player_partido WHERE fk_player = {pk_player} ")
+            usergame = cursor.fetchall()
+            return usergame
 
     # NO SÉ SI ESTA BIEN QUE UNA TABLA QUE SOLO TIENE FK SE PUEDA ACTUALIZAR
 
-    #def update_usergame(self, new_fkpartido, new_fkplayer, ur_pk):
+    #def update_usergame(self, new_fkpartido, new_fkplayer, pk_player):
     #    connection = psycopg2.connect(
     #        host="127.0.0.1",
     #        database="pes",
@@ -295,9 +331,11 @@ class UserGame:
     #    )
 
     #    cursor = connection.cursor()
-    #    cursor.execute(f"UPDATE player_partido SET fk_partido = {new_fkpartido} , fk_player = {new_fkplayer} WHERE fk_partido = {ur_pk}")
+    #    self.fk_partido = new_fkpartido
+    #    self.fk_player = new_fkplayer
+    #    cursor.execute(f"UPDATE player_partido SET fk_partido = {new_fkpartido} , fk_player = {new_fkplayer} WHERE fk_player = {pk_player}")
 
-    def show_usergame(self, ur_pk):
+    def delete_usergame(self,pk_player):
         connection = psycopg2.connect(
             host="127.0.0.1",
             database="pes",
@@ -305,11 +343,10 @@ class UserGame:
             password="pes"
         )
         cursor = connection.cursor()
-        cursor.execute(f"SELECT * FROM player_partido WHERE pk = {ur_pk}")
-        usergame = cursor.fetchall()
-        print(usergame)
+        cursor.execute(f"DELETE FROM player_partido WHERE fk_player = {pk_player}")
+        connection.commit()
 
-    def delete_usergame(self, ur_pk):
+    def list_usersgames(self):
         connection = psycopg2.connect(
             host="127.0.0.1",
             database="pes",
@@ -317,8 +354,9 @@ class UserGame:
             password="pes"
         )
         cursor = connection.cursor()
-        cursor.execute(f"DELETE FROM player_partido WHERE pk = {ur_pk}")
-
+        cursor.execute(f"SELECT * FROM player_partido")
+        games = cursor.fetchall()
+        return games
 
 # -------------------------------------------------------------------------------------
 
@@ -336,10 +374,24 @@ class PlayersTeam:
         )
         cursor = connection.cursor()
         cursor.execute(f"INSERT INTO jugadores_equipo(fk_jugadores, fk_equipo) VALUES ({pk_jugadores}, {pk_equipo})")
+        connection.commit()
+
+    def retrieve_playerteam(self, pk_equipo):
+        if pk_equipo is not None:
+            connection = psycopg2.connect(
+                host="127.0.0.1",
+                database="pes",
+                user="pes",
+                password="pes"
+            )
+            cursor = connection.cursor()
+            cursor.execute(f"SELECT * FROM jugadores_equipo WHERE fk_equipo = {pk_equipo}")
+            playerteam = cursor.fetchall()
+            return playerteam
 
     # NO SÉ SI ESTA BIEN QUE UNA TABLA QUE SOLO TIENE FK SE PUEDA ACTUALIZAR
 
-    #def update_playerteam(self, new_fkjugadores, new_fkequipo, ur_pk):
+    #def update_playerteam(self, new_fkjugadores, new_fkequipo, pk_equipo):
     #    connection = psycopg2.connect(
     #        host="127.0.0.1",
     #        database="pes",
@@ -348,9 +400,13 @@ class PlayersTeam:
     #    )
 
     #    cursor = connection.cursor()
-    #    cursor.execute(f"UPDATE jugadores_equipo SET fk_jugadores = {new_fkjugadores} , fk_equipo = {new_fkequipo} WHERE fk_jugadores = {ur_pk}")
+    #    self.fk_equipo = new_fkequipo
+    #    self.fk_jugadores = new_fkjugadores
+    #    cursor.execute(f"UPDATE jugadores_equipo SET fk_jugadores = {new_fkjugadores} , fk_equipo = {new_fkequipo} WHERE fk_equipo = {pk_equipo}")
+    #    connection.commit()
 
-    def show_playerteam(self, ur_pk):
+
+    def delete_playerteam(self, pk_equipo):
         connection = psycopg2.connect(
             host="127.0.0.1",
             database="pes",
@@ -358,11 +414,10 @@ class PlayersTeam:
             password="pes"
         )
         cursor = connection.cursor()
-        cursor.execute(f"SELECT * FROM jugadores_equipo WHERE pk = {ur_pk}")
-        playerteam = cursor.fetchall()
-        print(playerteam)
+        cursor.execute(f"DELETE FROM jugadores_equipo WHERE fk_equipo = {pk_equipo}")
+        connection.commit()
 
-    def delete_playerteam(self, ur_pk):
+    def list_playersteams(self):
         connection = psycopg2.connect(
             host="127.0.0.1",
             database="pes",
@@ -370,8 +425,9 @@ class PlayersTeam:
             password="pes"
         )
         cursor = connection.cursor()
-        cursor.execute(f"DELETE FROM jugadores_equipo WHERE pk = {ur_pk}")
-
+        cursor.execute(f"SELECT * FROM jugadores_equipo")
+        playersteam = cursor.fetchall()
+        return playersteam
 
 # -------------------------------------------------------------------------------------
 
@@ -389,10 +445,24 @@ class TeamGame:
         )
         cursor = connection.cursor()
         cursor.execute(f"INSERT INTO equipo_partido(fk_equipo, fk_partido) VALUES ({pk_equipo}, {pk_partido})")
+        connection.commit()
+
+    def retrieve_teamgame(self, pk_equipo):
+        if pk_equipo is not None:
+            connection = psycopg2.connect(
+                host="127.0.0.1",
+                database="pes",
+                user="pes",
+                password="pes"
+            )
+            cursor = connection.cursor()
+            cursor.execute(f"SELECT * FROM equipo_partido WHERE fk_equipo = {pk_equipo}")
+            teamgame = cursor.fetchall()
+            return teamgame
 
     # NO SÉ SI ESTA BIEN QUE UNA TABLA QUE SOLO TIENE FK SE PUEDA ACTUALIZAR
 
-    #def update_teamgame(self, new_equipo, new_fkpartido, ur_pk):
+    #def update_teamgame(self, new_fkequipo, new_fkpartido, pk_equipo):
     #    connection = psycopg2.connect(
     #        host="127.0.0.1",
     #        database="pes",
@@ -401,9 +471,13 @@ class TeamGame:
     #    )
 
     #    cursor = connection.cursor()
-    #    cursor.execute(f"UPDATE equipo_partido SET fk_equipo = {new_fkequipo} , fk_partido = {new_fkpartido} WHERE fk_equipo = {ur_pk}")
+    #    self.fk_equipo = new_fkequipo
+    #    self.fk_partido = new_fkpartido
+    #    cursor.execute(f"UPDATE equipo_partido SET fk_equipo = {new_fkequipo} , fk_partido = {new_fkpartido} WHERE fk_equipo = {pk_equipo}")}
+    #    connection.commit()
 
-    def show_teamgame(self, ur_pk):
+
+    def delete_teamgame(self, pk_equipo):
         connection = psycopg2.connect(
             host="127.0.0.1",
             database="pes",
@@ -411,25 +485,16 @@ class TeamGame:
             password="pes"
         )
         cursor = connection.cursor()
-        cursor.execute(f"SELECT * FROM equipo_partido WHERE pk = {ur_pk}")
-        teamgame = cursor.fetchall()
-        print(teamgame)
+        cursor.execute(f"DELETE FROM equipo_partido WHERE fk_equipo = {pk_equipo}")
+        connection.commit()
 
-    def delete_teamgame(self, ur_pk):
-        connection = psycopg2.connect(
-            host="127.0.0.1",
-            database="pes",
-            user="pes",
-            password="pes"
-        )
-        cursor = connection.cursor()
-        cursor.execute(f"DELETE FROM equipo_partido WHERE pk = {ur_pk}")
 
 # -------------------------------------------------------------------------------------
 
 class Goal:
     def __init__(self, fk_partido):
         self.fk_partido = fk_partido
+        self.pk = None
 
     def create_goal(self, pk_partido):
         connection = psycopg2.connect(
@@ -439,21 +504,39 @@ class Goal:
             password="pes"
         )
         cursor = connection.cursor()
-        cursor.execute(f"INSERT INTO goles (fk_partido) VALUES ({pk_partido})")
+        cursor.execute(f"INSERT INTO goles (fk_partido) VALUES ({pk_partido}) RETURNING pk")
+        self.pk = cursor.fetchone()[0]
+        connection.commit()
 
-    # NO SÉ SI ESTA BIEN QUE UNA TABLA QUE SOLO TIENE FK SE PUEDA ACTUALIZAR
+    def retrieve_goal(self):
+        if self.pk is not None:
+            connection = psycopg2.connect(
+                host="127.0.0.1",
+                database="pes",
+                user="pes",
+                password="pes"
+            )
+            cursor = connection.cursor()
+            cursor.execute(f"SELECT * FROM goles WHERE pk = {self.pk}")
+            goals = cursor.fetchall()
+            return goals
 
-    #def update_goal(self, new_fkpartido, ur_pk):
-    #    connection = psycopg2.connect(
-    #        host="127.0.0.1",
-    #        database="pes",
-    #        user="pes",
-    #        password="pes"
-    #    )
-    #    cursor = connection.cursor()
-    #    cursor.execute(f"UPDATE goles SET fk_partido = {new_fkpartido} WHERE pk = {ur_pk} ")
 
-    def show_goal(self, ur_pk):
+    def update_goal(self, new_fkpartido):
+        if self.pk is not None:
+            connection = psycopg2.connect(
+                host="127.0.0.1",
+                database="pes",
+                user="pes",
+                password="pes"
+            )
+            cursor = connection.cursor()
+            self.fk_partido = new_fkpartido
+            cursor.execute(f"UPDATE goles SET fk_partido = {new_fkpartido} WHERE pk = {self.pk} ")
+            connection.commit()
+
+
+    def delete_goal(self):
         connection = psycopg2.connect(
             host="127.0.0.1",
             database="pes",
@@ -461,19 +544,10 @@ class Goal:
             password="pes"
         )
         cursor = connection.cursor()
-        cursor.execute(f"SELECT * FROM goles WHERE fk_partido = {ur_pk}")
-        goals = cursor.fetchall()
-        print(goals)
+        cursor.execute(f"DELETE FROM goles WHERE pk = {self.pk}")
+        connection.commit()
+        self.pk = None
 
-    def delete_goal(self, ur_pk):
-        connection = psycopg2.connect(
-            host="127.0.0.1",
-            database="pes",
-            user="pes",
-            password="pes"
-        )
-        cursor = connection.cursor()
-        cursor.execute(f"DELETE FROM goles WHERE pk = {ur_pk}")
 
 # -------------------------------------------------------------------------------------
 
